@@ -1,7 +1,11 @@
 import spacy
-from fastapi import FastAPI
+from io import BytesIO
+
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from pydantic import BaseModel
+from PIL import Image, UnidentifiedImageError
 from app.bigram_model import BigramModel
+from app.cnn_model import load_classifier, predict_image
 
 app = FastAPI()
 
@@ -16,6 +20,7 @@ corpus = [
 bigram_model = BigramModel(corpus)
 
 nlp = spacy.load("en_core_web_lg")
+classifier = load_classifier()
 
 
 def calculate_embedding(input_word):
@@ -43,3 +48,16 @@ def generate_text(request: TextGenerationRequest):
 def get_embedding(word: str):
     embedding = calculate_embedding(word)
     return {"word": word, "embedding": embedding.tolist()}
+
+
+@app.post("/classify-image")
+async def classify_image(file: UploadFile = File(...)):
+    if file.content_type not in {"image/jpeg", "image/png", "image/webp"}:
+        raise HTTPException(status_code=415, detail="Upload a JPEG, PNG, or WebP image")
+    try:
+        contents = await file.read()
+        with Image.open(BytesIO(contents)) as image:
+            image.load()
+            return predict_image(classifier, image)
+    except (UnidentifiedImageError, OSError):
+        raise HTTPException(status_code=400, detail="Invalid image file")

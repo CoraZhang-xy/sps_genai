@@ -6,7 +6,18 @@ dependencies = [
     "fastapi[standard]>=0.115",
     "spacy>=3.8,<3.9",
     "en-core-web-lg",
+    "torch>=2.5,<2.6",
+    "torchvision>=0.20,<0.21",
+    "pillow>=10,<12",
+    "python-multipart>=0.0.9",
 ]
 
 [tool.uv.sources]
 en-core-web-lg = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl" }
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+torchvision = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
