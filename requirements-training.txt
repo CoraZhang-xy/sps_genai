@@ -1,0 +1,3 @@
+# Install into the uv project environment after uv sync --frozen.
+matplotlib==3.10.8
+tqdm==4.67.1

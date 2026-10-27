@@ -1,7 +1,7 @@
 import spacy
 from io import BytesIO
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile, Query, Response
 from pydantic import BaseModel
 from PIL import Image, UnidentifiedImageError
 from app.bigram_model import BigramModel
@@ -61,3 +61,29 @@ async def classify_image(file: UploadFile = File(...)):
             return predict_image(classifier, image)
     except (UnidentifiedImageError, OSError):
         raise HTTPException(status_code=400, detail="Invalid image file")
+
+
+# Assignment 3: MNIST GAN image generation.
+from app.gan_model import load_gan
+from app.helper_lib.generator import generate_images
+from torchvision.utils import make_grid
+from torchvision.transforms.functional import to_pil_image
+
+# Keep existing assignment endpoints available before GAN training is finished.
+gan_model = None
+
+
+@app.get("/gan/generate", response_class=Response,
+         responses={200: {"content": {"image/png": {}}}})
+def generate_digits(num_samples: int = Query(default=10, ge=1, le=100)):
+    global gan_model
+    if gan_model is None:
+        try:
+            gan_model = load_gan()
+        except FileNotFoundError as error:
+            raise HTTPException(status_code=503, detail=str(error))
+    images = generate_images(gan_model, "cpu", num_samples)
+    grid = make_grid(images * 0.5 + 0.5, nrow=5)
+    buffer = BytesIO()
+    to_pil_image(grid).save(buffer, format="PNG")
+    return Response(content=buffer.getvalue(), media_type="image/png")
